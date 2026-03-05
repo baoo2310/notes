@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ThemeModeScript } from 'flowbite-react';
 import { ThemeProvider } from "./components/theme-provider";
+import TrpcProvider from "./components/providers/TrpcProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,19 +21,21 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <ThemeModeScript />
-      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <TrpcProvider>{children}</TrpcProvider>
         </ThemeProvider>
       </body>
     </html>

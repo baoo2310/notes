@@ -1,4 +1,6 @@
 import { integer, pgEnum, pgTable, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+import { workspaceOwnerTable } from "./workspace";
 
 export const userRolesEnum = pgEnum("roles", ["admin", "user"]);
 
@@ -14,5 +16,9 @@ export const usersTable = pgTable("users", {
   createdAt: timestamp().notNull().$default(() => new Date()),
   updatedAt: timestamp(),
 }, (table) => [
-    uniqueIndex("email_idx").on(table.email)
+  uniqueIndex("email_idx").on(table.email)
 ]);
+
+export const usersRelations = relations(usersTable, ({ many }) => ({
+  workspaceOwners: many(workspaceOwnerTable),
+}));
