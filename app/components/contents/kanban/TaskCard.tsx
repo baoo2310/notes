@@ -26,7 +26,7 @@ export default function TaskCard({ task, isOverlay }: TaskCardProps) {
             <div
                 ref={setNodeRef}
                 style={style}
-                className="bg-default-medium opacity-50 p-3 h-16 min-h-[64px] rounded-md border-2 border-brand cursor-grab relative"
+                className="bg-default-medium opacity-50 p-3 min-h-[64px] rounded-md border-2 border-brand cursor-grab relative"
             />
         );
     }
