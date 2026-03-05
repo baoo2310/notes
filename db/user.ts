@@ -1,6 +1,6 @@
 import { integer, pgEnum, pgTable, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { workspaceOwnerTable } from "./workspace";
+import { workspaceMemberTable, workspaceTable } from "./workspace";
 
 export const userRolesEnum = pgEnum("roles", ["admin", "user"]);
 
@@ -20,5 +20,6 @@ export const usersTable = pgTable("users", {
 ]);
 
 export const usersRelations = relations(usersTable, ({ many }) => ({
-  workspaceOwners: many(workspaceOwnerTable),
+  ownedWorkspaces: many(workspaceTable),
+  sharedWorkspaces: many(workspaceMemberTable),
 }));

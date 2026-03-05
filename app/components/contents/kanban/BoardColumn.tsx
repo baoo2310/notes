@@ -1,4 +1,4 @@
-import { SortableContext, useSortable } from "@dnd-kit/sortable";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Column, Task } from "./types";
 import TaskCard from "./TaskCard";
@@ -54,7 +54,7 @@ export default function BoardColumn({ column, tasks }: ColumnProps) {
             </div>
 
             <div className="flex flex-col gap-2 flex-grow overflow-y-auto p-1">
-                <SortableContext items={tasksIds}>
+                <SortableContext items={tasksIds} strategy={verticalListSortingStrategy}>
                     {tasks.map((task) => (
                         <TaskCard key={task.id} task={task} />
                     ))}

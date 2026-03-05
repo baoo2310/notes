@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import {
     DndContext,
     DragOverlay,
@@ -13,7 +14,7 @@ import {
     DragOverEvent,
     DragEndEvent,
 } from "@dnd-kit/core";
-import { SortableContext, arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 
 import { Column, Task } from "./types";
 import { defaultCols, defaultTasks } from "./mockData";
@@ -124,7 +125,7 @@ export default function KanbanBoard() {
                 onDragEnd={onDragEnd}
             >
                 <div className="flex gap-4">
-                    <SortableContext items={columnsId}>
+                    <SortableContext items={columnsId} strategy={horizontalListSortingStrategy}>
                         {columns.map((col) => (
                             <BoardColumn
                                 key={col.id}
@@ -135,15 +136,18 @@ export default function KanbanBoard() {
                     </SortableContext>
                 </div>
 
-                <DragOverlay>
-                    {activeColumn && (
-                        <BoardColumn
-                            column={activeColumn}
-                            tasks={tasks.filter((task) => task.columnId === activeColumn.id)}
-                        />
-                    )}
-                    {activeTask && <TaskCard task={activeTask} isOverlay />}
-                </DragOverlay>
+                {typeof document !== 'undefined' && createPortal(
+                    <DragOverlay>
+                        {activeColumn && (
+                            <BoardColumn
+                                column={activeColumn}
+                                tasks={tasks.filter((task) => task.columnId === activeColumn.id)}
+                            />
+                        )}
+                        {activeTask && <TaskCard task={activeTask} isOverlay />}
+                    </DragOverlay>,
+                    document.body
+                )}
             </DndContext>
         </div>
     );
