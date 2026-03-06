@@ -3,12 +3,16 @@
 import { useState } from "react";
 import { Rnd } from "react-rnd";
 import { MdDragHandle } from "react-icons/md";
+import { FaTrash } from "react-icons/fa";
 import PageHeadBar from "./contents/PageHeadBar";
 import KanbanBoard from "./contents/kanban";
+import NoteBlock from "./contents/NoteBlock";
+import CalendarBlock from "./contents/CalendarBlock";
+import LinkBlock from "./contents/LinkBlock";
+import BlockToolbar from "./BlockToolbar";
 import { trpc } from "@/utils/trpc";
 
-// NOTE removed: Now only dynamic blocks can be dragged/resized
-export type BlockType = "BOARD" | "CALENDAR" | "LINK";
+export type BlockType = "NOTE" | "BOARD" | "CALENDAR" | "LINK";
 
 export interface PageBlock {
     id: string;
@@ -22,7 +26,15 @@ export interface PageBlock {
     content?: any;
 }
 
+export interface PageData {
+    id: string;
+    name: string;
+    icon_img?: string | null;
+    background_img?: string | null;
+}
+
 interface PageContentProps {
+    page?: PageData | null;
     blocks: PageBlock[];
 }
 
@@ -33,6 +45,12 @@ function BlockRenderer({ block }: { block: PageBlock }) {
     const trpcUtils = trpc.useUtils();
     const updateBlock = trpc.page.updateBlockPosition.useMutation({
         onSettled: () => {
+            trpcUtils.page.getById.invalidate({ id: block.page_id });
+        }
+    });
+
+    const deleteBlock = trpc.page.deleteBlock.useMutation({
+        onSuccess: () => {
             trpcUtils.page.getById.invalidate({ id: block.page_id });
         }
     });
@@ -68,14 +86,16 @@ function BlockRenderer({ block }: { block: PageBlock }) {
 
     const renderContent = () => {
         switch (block.type) {
+            case "NOTE":
+                return <div className="h-full w-full overflow-hidden"><NoteBlock /></div>;
             case "BOARD":
                 return <div className="h-full w-full overflow-hidden"><KanbanBoard /></div>;
             case "CALENDAR":
-                return <div className="p-4 flex items-center justify-center h-full text-body bg-brand/10">Calendar View Placeholder</div>;
+                return <div className="h-full w-full overflow-hidden"><CalendarBlock /></div>;
             case "LINK":
-                return <div className="p-4 flex items-center justify-center h-full text-body bg-brand/10">Link Redirecting...</div>;
+                return <div className="h-full w-full overflow-hidden"><LinkBlock /></div>;
             default:
-                return <div className="p-4 flex items-center justify-center h-full text-body bg-brand/10">Unsupported Page Type</div>;
+                return <div className="p-4 flex items-center justify-center h-full text-muted-foreground">Unsupported Block Type</div>;
         }
     };
 
@@ -88,10 +108,17 @@ function BlockRenderer({ block }: { block: PageBlock }) {
             dragHandleClassName="drag-top-bar"
             bounds="parent"
             style={{ zIndex: block.z_index }}
-            className="rounded-lg bg-neutral-primary border border-default-medium shadow-sm hover:shadow-md transition-shadow group flex flex-col"
+            className="rounded-lg bg-card border border-border shadow-sm hover:shadow-md transition-shadow group flex flex-col"
         >
-            <div className="drag-top-bar w-full h-6 bg-brand/5 border-b border-default-soft flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                <MdDragHandle className="text-body-muted text-lg" />
+            <div className="drag-top-bar w-full h-6 bg-accent/30 border-b border-border flex items-center justify-between px-2 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                <MdDragHandle className="text-muted-foreground text-lg" />
+                <button
+                    onClick={() => deleteBlock.mutate({ id: block.id })}
+                    className="text-muted-foreground hover:text-destructive transition-colors p-0.5"
+                    title="Delete block"
+                >
+                    <FaTrash size={10} />
+                </button>
             </div>
 
             <div className="flex-1 w-full h-full overflow-auto relative">
@@ -101,29 +128,29 @@ function BlockRenderer({ block }: { block: PageBlock }) {
     );
 }
 
-export default function PageContentRenderer({ blocks }: PageContentProps) {
-    const helloQuery = trpc.hello.useQuery();
-
+export default function PageContentRenderer({ page, blocks }: PageContentProps) {
     const sortedBlocks = blocks ? [...blocks].sort((a, b) => a.z_index - b.z_index) : [];
 
     return (
         <div className="flex-1 overflow-y-auto w-full h-full flex flex-col bg-background">
             {/* === STATIC PAGE HEADER === */}
-            <PageHeadBar />
+            <PageHeadBar page={page} />
 
             {/* === DRAGGABLE BLOCKS CANVAS === */}
-            {/* The canvas takes up the remaining height, and is relative so Rnd works perfectly */}
             <div className="flex-1 w-full relative min-h-[800px]">
 
                 {!blocks || blocks.length === 0 ? (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-body-muted py-20">
-                        <p>This page is empty. Select a block from the menu to get started.</p>
+                    <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground py-20">
+                        <p>This page is empty. Click the <span className="text-primary font-semibold">+</span> button to add a block.</p>
                     </div>
                 ) : (
                     sortedBlocks.map(block => (
                         <BlockRenderer key={block.id} block={block} />
                     ))
                 )}
+
+                {/* Block toolbar FAB */}
+                {page && <BlockToolbar pageId={page.id} />}
             </div>
         </div>
     );
