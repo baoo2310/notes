@@ -8,10 +8,15 @@ export default function ListPageSideBar() {
     const { workspaceId, selectedPageId, setSelectedPageId } = usePage();
 
     const { data: pages, isLoading } = trpc.page.getAll.useQuery(
+        // @ts-ignore - we know it's not null here because we return early below
         { workspace_id: workspaceId },
+        { enabled: !!workspaceId }
     );
 
     const trpcUtils = trpc.useUtils();
+
+    // Do not render pages if no workspace is selected
+    if (!workspaceId) return null;
 
     const createPage = trpc.page.create.useMutation({
         onSuccess: (newPage) => {

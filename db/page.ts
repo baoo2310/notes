@@ -38,7 +38,7 @@ export const pageBlockTable = pgTable("page_block", {
 
 export const pageMemberTable = pgTable("page_member", {
     page_id: uuid("page_id").references(() => pageTable.id, { onDelete: 'cascade' }).notNull(),
-    user_id: uuid("user_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
+    user_id: varchar("user_id", { length: 255 }).references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
     role: pageRoleEnum("role").notNull().default("viewer"),
     createdAt: timestamp().notNull().$default(() => new Date()),
 }, (t) => [

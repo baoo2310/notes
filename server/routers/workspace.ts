@@ -1,13 +1,14 @@
 import { z } from 'zod';
-import { router, publicProcedure } from '../trpc';
+import { router, protectedProcedure } from '../trpc';
 import { db } from '@/db';
 import { workspaceTable } from '@/db/workspace';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 export const workspaceRouter = router({
-    // Get all workspaces (in a real app, this would filter by the logged-in user)
-    getAll: publicProcedure.query(async () => {
+    // Get all workspaces owned by the current user
+    getAll: protectedProcedure.query(async ({ ctx }) => {
         return await db.query.workspaceTable.findMany({
+            where: eq(workspaceTable.owner_id, ctx.session.user.id),
             with: {
                 owner: true,
                 pages: true,
@@ -16,9 +17,9 @@ export const workspaceRouter = router({
     }),
 
     // Get a single workspace by ID
-    getById: publicProcedure
+    getById: protectedProcedure
         .input(z.object({ id: z.string().uuid() }))
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
             return await db.query.workspaceTable.findFirst({
                 where: eq(workspaceTable.id, input.id),
                 with: {
@@ -34,15 +35,14 @@ export const workspaceRouter = router({
         }),
 
     // Create a new workspace
-    create: publicProcedure
+    create: protectedProcedure
         .input(z.object({
             name: z.string().min(1),
-            owner_id: z.string().uuid(),
         }))
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
             const [newWorkspace] = await db.insert(workspaceTable).values({
                 name: input.name,
-                owner_id: input.owner_id,
+                owner_id: ctx.session.user.id,
             }).returning();
 
             return newWorkspace;
