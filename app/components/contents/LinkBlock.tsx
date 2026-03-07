@@ -1,14 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FaExternalLinkAlt, FaLink } from "react-icons/fa";
+import { trpc } from "@/utils/trpc";
 
-export default function LinkBlock() {
-    const [url, setUrl] = useState("");
-    const [saved, setSaved] = useState(false);
+interface LinkBlockProps {
+    blockId: string;
+    initialContent?: any;
+}
+
+export default function LinkBlock({ blockId, initialContent }: LinkBlockProps) {
+    const [url, setUrl] = useState(initialContent?.url || "");
+    const [saved, setSaved] = useState(!!initialContent?.url);
+
+    const updateContent = trpc.page.updateBlockContent.useMutation();
 
     const handleSave = () => {
-        if (url.trim()) setSaved(true);
+        if (url.trim()) {
+            setSaved(true);
+            updateContent.mutate({ id: blockId, content: { url: url.trim() } });
+        }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {

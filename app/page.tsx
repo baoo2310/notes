@@ -1,9 +1,14 @@
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 import { AppBar } from "./components/AppBar";
 import MainContent from "./components/MainContent";
 import { SidebarProvider } from "./context/SidebarContext";
 import { PageProvider } from "./context/PageContext";
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth();
+  if (!session) redirect("/landing");
+
   return (
     <SidebarProvider>
       <PageProvider>

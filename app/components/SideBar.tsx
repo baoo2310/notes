@@ -6,6 +6,7 @@ import { usePage } from "../context/PageContext";
 import ListPageSideBar from "./ListPageSideBar";
 import { useSession } from "next-auth/react";
 import { trpc } from "@/utils/trpc";
+import Link from "next/link";
 
 export default function SideBar() {
     const { isOpen } = useSidebar();
@@ -80,10 +81,10 @@ export default function SideBar() {
                 {/* Settings at bottom */}
                 <div className="px-3 pb-4 mt-auto">
                     <hr className="border-t border-border mb-2" />
-                    <div className="group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent text-foreground cursor-pointer transition-all">
+                    <Link href="/settings" className="group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent text-foreground cursor-pointer transition-all">
                         <FaCog className="text-muted-foreground w-4 h-4 group-hover:text-primary transition-colors" />
                         <span>Settings</span>
-                    </div>
+                    </Link>
                 </div>
             </div>
         </div>

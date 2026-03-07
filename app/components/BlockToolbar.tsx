@@ -1,23 +1,23 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { FaPlus, FaStickyNote, FaTrello, FaCalendarAlt, FaLink } from "react-icons/fa";
+import { FaPlus, FaStickyNote, FaTrello, FaCalendarAlt, FaLink, FaClock } from "react-icons/fa";
+import { GiTomato } from "react-icons/gi";
 import { trpc } from "@/utils/trpc";
-import { usePage } from "@/app/context/PageContext";
 
 type BlockTypeOption = {
-    type: "NOTE" | "BOARD" | "CALENDAR" | "LINK";
+    type: "NOTE" | "BOARD" | "CALENDAR" | "LINK" | "POMODORO" | "CLOCK";
     label: string;
     icon: React.ReactNode;
-    defaultWidth: number;
-    defaultHeight: number;
 };
 
 const BLOCK_OPTIONS: BlockTypeOption[] = [
-    { type: "NOTE", label: "Note", icon: <FaStickyNote size={14} />, defaultWidth: 300, defaultHeight: 250 },
-    { type: "BOARD", label: "Board", icon: <FaTrello size={14} />, defaultWidth: 600, defaultHeight: 400 },
-    { type: "CALENDAR", label: "Calendar", icon: <FaCalendarAlt size={14} />, defaultWidth: 350, defaultHeight: 350 },
-    { type: "LINK", label: "Link", icon: <FaLink size={14} />, defaultWidth: 220, defaultHeight: 200 },
+    { type: "NOTE", label: "Note", icon: <FaStickyNote size={14} /> },
+    { type: "BOARD", label: "Board", icon: <FaTrello size={14} /> },
+    { type: "CALENDAR", label: "Calendar", icon: <FaCalendarAlt size={14} /> },
+    { type: "LINK", label: "Link", icon: <FaLink size={14} /> },
+    { type: "POMODORO", label: "Pomodoro", icon: <GiTomato size={14} /> },
+    { type: "CLOCK", label: "Clock", icon: <FaClock size={14} /> },
 ];
 
 export default function BlockToolbar({ pageId }: { pageId: string }) {
@@ -43,22 +43,14 @@ export default function BlockToolbar({ pageId }: { pageId: string }) {
     }, []);
 
     const handleAdd = (option: BlockTypeOption) => {
-        // Randomize position slightly so blocks don't stack exactly
-        const offsetX = Math.floor(Math.random() * 200) + 20;
-        const offsetY = Math.floor(Math.random() * 200) + 20;
-
         addBlock.mutate({
             page_id: pageId,
             type: option.type,
-            pos_x: offsetX,
-            pos_y: offsetY,
-            width: option.defaultWidth,
-            height: option.defaultHeight,
         });
     };
 
     return (
-        <div className="absolute bottom-6 right-6 z-50" ref={menuRef}>
+        <div className="fixed bottom-6 right-6 z-50" ref={menuRef}>
             {/* Popover menu */}
             {isOpen && (
                 <div className="absolute bottom-14 right-0 bg-card border border-border rounded-lg shadow-xl p-2 min-w-[160px] animate-in fade-in slide-in-from-bottom-2 duration-200">

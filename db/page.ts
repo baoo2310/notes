@@ -3,7 +3,7 @@ import { relations } from "drizzle-orm";
 import { workspaceTable } from "./workspace";
 import { usersTable } from "./user";
 
-export const blockTypeEnum = pgEnum('block_type', ['NOTE', 'BOARD', 'CALENDAR', 'LINK']);
+export const blockTypeEnum = pgEnum('block_type', ['NOTE', 'BOARD', 'CALENDAR', 'LINK', 'POMODORO', 'CLOCK']);
 export const pageRoleEnum = pgEnum('page_role', ['viewer', 'editor']);
 
 // A single page acts as a container for many content "blocks"
@@ -23,15 +23,7 @@ export const pageBlockTable = pgTable("page_block", {
     id: uuid("page_block").primaryKey().defaultRandom(),
     page_id: uuid("page_id").references(() => pageTable.id, { onDelete: 'cascade' }).notNull(),
     type: blockTypeEnum("type").notNull().default("NOTE"),
-
-    pos_x: integer("pos_x").notNull().default(0),
-    pos_y: integer("pos_y").notNull().default(0),
-
-    width: integer("width").notNull().default(300),
-    height: integer("height").notNull().default(200),
-
-    z_index: integer("z_index").notNull().default(1),
-
+    order: integer("order").notNull().default(0),
     content: jsonb("content"),
     updatedAt: timestamp()
 })
@@ -61,4 +53,11 @@ export const pageRelations = relations(pageTable, ({ one, many }) => ({
         relationName: "nested_pages"
     }),
     blocks: many(pageBlockTable)
+}));
+
+export const pageBlockRelations = relations(pageBlockTable, ({ one }) => ({
+    page: one(pageTable, {
+        fields: [pageBlockTable.page_id],
+        references: [pageTable.id]
+    }),
 }));

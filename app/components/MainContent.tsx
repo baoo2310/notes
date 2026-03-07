@@ -8,21 +8,21 @@ import { trpc } from "@/utils/trpc";
 export default function MainContent() {
     const { selectedPageId } = usePage();
 
-    const { data: pageData } = trpc.page.getById.useQuery(
+    const { data: pageData, error, isLoading } = trpc.page.getById.useQuery(
         { id: selectedPageId! },
         { enabled: !!selectedPageId }
     );
+
+    if (error) {
+        console.error("page.getById error:", error.message);
+    }
 
     // Map DB blocks to the component's expected shape
     const blocks: PageBlock[] = (pageData?.blocks ?? []).map((b: any) => ({
         id: b.id,
         page_id: b.page_id,
         type: b.type,
-        pos_x: b.pos_x,
-        pos_y: b.pos_y,
-        width: b.width,
-        height: b.height,
-        z_index: b.z_index,
+        order: b.order ?? 0,
         content: b.content,
     }));
 
@@ -33,11 +33,17 @@ export default function MainContent() {
         background_img: pageData.background_img,
     } : null;
 
+    const childPages = (pageData as any)?.childPages?.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        icon_img: c.icon_img,
+    })) ?? [];
+
     return (
         <>
             <div className="flex flex-1 overflow-hidden w-full flex-row">
                 <SideBar />
-                <PageContentRenderer page={page} blocks={blocks} />
+                <PageContentRenderer page={page} blocks={blocks} childPages={childPages} />
             </div>
         </>
     );
