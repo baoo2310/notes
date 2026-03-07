@@ -4,6 +4,7 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter"
 import { db } from "./db"
 import { usersTable } from "./db/user"
 import { accounts, sessions, verificationTokens } from "./db/auth"
+import { eq } from "drizzle-orm"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
     adapter: DrizzleAdapter(db, {
@@ -19,4 +20,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }),
     ],
     session: { strategy: "database" },
+    callbacks: {
+        async session({ session, user }) {
+            // Fetch user role from DB and attach to session
+            const dbUser = await db.query.usersTable.findFirst({
+                where: eq(usersTable.id, user.id),
+                columns: { role: true },
+            });
+            session.user.id = user.id;
+            (session.user as any).role = dbUser?.role ?? "user";
+            return session;
+        },
+    },
 })

@@ -1,9 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { trpc } from "@/utils/trpc";
 
-export default function NoteBlock() {
-    const [content, setContent] = useState("");
+interface NoteBlockProps {
+    blockId: string;
+    initialContent?: any;
+}
+
+export default function NoteBlock({ blockId, initialContent }: NoteBlockProps) {
+    const [content, setContent] = useState(initialContent?.text || "");
+
+    const updateContent = trpc.page.updateBlockContent.useMutation();
+
+    // Debounced save
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (content !== (initialContent?.text || "")) {
+                updateContent.mutate({ id: blockId, content: { text: content } });
+            }
+        }, 800);
+        return () => clearTimeout(timer);
+    }, [content, blockId]);
 
     return (
         <div className="h-full w-full flex flex-col bg-card">
