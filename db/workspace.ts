@@ -9,7 +9,7 @@ export const workspaceRoleEnum = pgEnum("workspaces_role", ["viewer", "editor", 
 export const workspaceTable = pgTable("workspace", {
     id: uuid("workspace").primaryKey().defaultRandom(),
     name: varchar("name").notNull().unique(),
-    owner_id: uuid("owner_id").references(() => usersTable.id).notNull(),
+    owner_id: varchar("owner_id", { length: 255 }).references(() => usersTable.id).notNull(),
     createdAt: timestamp().notNull().$default(() => new Date()),
     updatedAt: timestamp(),
 })
@@ -25,7 +25,7 @@ export const workspaceRelations = relations(workspaceTable, ({ one, many }) => (
 
 export const workspaceMemberTable = pgTable("workspace_member", {
     workspace_id: uuid("workspace_id").references(() => workspaceTable.id, { onDelete: 'cascade' }).notNull(),
-    user_id: uuid("user_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
+    user_id: varchar("user_id", { length: 255 }).references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
     role: workspaceRoleEnum("role").notNull().default("viewer"),
     createdAt: timestamp().notNull().$default(() => new Date()),
 }, (t) => [

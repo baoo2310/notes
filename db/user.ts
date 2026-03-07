@@ -5,13 +5,14 @@ import { workspaceMemberTable, workspaceTable } from "./workspace";
 export const userRolesEnum = pgEnum("roles", ["admin", "user"]);
 
 export const usersTable = pgTable("users", {
-  id: uuid("user").primaryKey().defaultRandom(),
-  email: varchar({ length: 255 }).notNull().unique(),
-  username: varchar({ length: 255 }).notNull(),
-  password: varchar().notNull(),
-  age: integer().notNull(),
+  id: varchar("id", { length: 255 }).notNull().primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: varchar("name", { length: 255 }),
+  email: varchar("email", { length: 255 }).notNull(),
+  emailVerified: timestamp("emailVerified", { mode: "date", precision: 3 }),
+  image: varchar("image", { length: 255 }),
+  // Our custom fields
   role: userRolesEnum().default("user"),
-  avatar: varchar(),
   bio: varchar(),
   createdAt: timestamp().notNull().$default(() => new Date()),
   updatedAt: timestamp(),

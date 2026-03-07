@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { router, publicProcedure } from '../trpc';
+import { router, protectedProcedure } from '../trpc';
 import { db } from '@/db';
 import { pageTable, pageBlockTable } from '@/db/page';
 import { eq } from 'drizzle-orm';
 
 export const pageRouter = router({
     // List all pages in a workspace
-    getAll: publicProcedure
+    getAll: protectedProcedure
         .input(z.object({ workspace_id: z.string().uuid() }))
         .query(async ({ input }) => {
             return await db.query.pageTable.findMany({
@@ -21,7 +21,7 @@ export const pageRouter = router({
         }),
 
     // Get a page and all its nested blocks
-    getById: publicProcedure
+    getById: protectedProcedure
         .input(z.object({ id: z.string().uuid() }))
         .query(async ({ input }) => {
             return await db.query.pageTable.findFirst({
@@ -34,7 +34,7 @@ export const pageRouter = router({
         }),
 
     // Create a new page
-    create: publicProcedure
+    create: protectedProcedure
         .input(z.object({
             name: z.string().min(1),
             workspace_id: z.string().uuid(),
@@ -48,7 +48,7 @@ export const pageRouter = router({
         }),
 
     // Delete a page
-    delete: publicProcedure
+    delete: protectedProcedure
         .input(z.object({ id: z.string().uuid() }))
         .mutation(async ({ input }) => {
             const [deleted] = await db.delete(pageTable)
@@ -58,7 +58,7 @@ export const pageRouter = router({
         }),
 
     // Add a block to a page
-    addBlock: publicProcedure
+    addBlock: protectedProcedure
         .input(z.object({
             page_id: z.string().uuid(),
             type: z.enum(['NOTE', 'BOARD', 'CALENDAR', 'LINK']),
@@ -80,7 +80,7 @@ export const pageRouter = router({
         }),
 
     // Delete a block
-    deleteBlock: publicProcedure
+    deleteBlock: protectedProcedure
         .input(z.object({ id: z.string().uuid() }))
         .mutation(async ({ input }) => {
             const [deleted] = await db.delete(pageBlockTable)
@@ -90,7 +90,7 @@ export const pageRouter = router({
         }),
 
     // Save a block's new position after dragging
-    updateBlockPosition: publicProcedure
+    updateBlockPosition: protectedProcedure
         .input(z.object({
             id: z.string().uuid(),
             pos_x: z.number().int(),

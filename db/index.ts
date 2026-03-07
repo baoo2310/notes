@@ -8,11 +8,14 @@ import * as pageSchema from "./page";
 import * as dotenv from "dotenv";
 dotenv.config();
 
+import * as authSchema from "./auth";
+
 // Combine all schemas into a single object for Drizzle's relational queries
 const schema = {
     ...userSchema,
     ...workspaceSchema,
     ...pageSchema,
+    ...authSchema,
 };
 
 // Create a connection pool to PostgreSQL
