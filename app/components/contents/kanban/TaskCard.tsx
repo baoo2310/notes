@@ -1,13 +1,15 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Task } from "./types";
+import { Id, Task } from "./types";
+import { FaTrash } from "react-icons/fa";
 
 interface TaskCardProps {
     task: Task;
+    deleteTask: (id: Id) => void;
     isOverlay?: boolean;
 }
 
-export default function TaskCard({ task, isOverlay }: TaskCardProps) {
+export default function TaskCard({ task, deleteTask, isOverlay }: TaskCardProps) {
     const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
         id: task.id,
         data: {
@@ -37,10 +39,18 @@ export default function TaskCard({ task, isOverlay }: TaskCardProps) {
             style={style}
             {...attributes}
             {...listeners}
-            className={`bg-neutral-primary p-3 rounded-md shadow-sm border border-default-medium text-body cursor-grab hover:border-brand/50 ${isOverlay ? "rotate-2 scale-105 shadow-md border-brand/50 cursor-grabbing" : ""
+            className={`bg-neutral-primary p-3 rounded-md shadow-sm border border-default-medium text-body cursor-grab hover:border-brand/50 group flex justify-between items-start gap-2 ${isOverlay ? "rotate-2 scale-105 shadow-md border-brand/50 cursor-grabbing" : ""
                 }`}
         >
             <p className="text-sm whitespace-pre-wrap">{task.content}</p>
+            <button
+                onClick={() => deleteTask(task.id)}
+                className="opacity-0 group-hover:opacity-100 transition-all text-default-medium hover:bg-red-100 hover:text-red-500 rounded-full p-2"
+                onPointerDown={(e) => e.stopPropagation()}
+                title="Delete task"
+            >
+                <FaTrash size={12} />
+            </button>
         </div>
     );
 }

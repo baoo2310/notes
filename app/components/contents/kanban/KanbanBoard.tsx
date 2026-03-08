@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { trpc } from "@/utils/trpc";
 import {
     DndContext,
     DragOverlay,
@@ -16,16 +17,69 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 
-import { Column, Task } from "./types";
+import { Column, Id, Task } from "./types";
 import { defaultCols, defaultTasks } from "./mockData";
 import TaskCard from "./TaskCard";
 import BoardColumn from "./BoardColumn";
 
-export default function KanbanBoard() {
-    const [columns, setColumns] = useState<Column[]>(defaultCols);
-    const [tasks, setTasks] = useState<Task[]>(defaultTasks);
+export default function KanbanBoard({ blockId, initialContent }: { blockId: string; initialContent?: any }) {
+    const [columns, setColumns] = useState<Column[]>(initialContent?.columns || defaultCols);
+    const [tasks, setTasks] = useState<Task[]>(initialContent?.tasks || defaultTasks);
     const [activeColumn, setActiveColumn] = useState<Column | null>(null);
     const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+    // Sync local state when parent props change (e.g., after React Query invalidation and refetch)
+    useEffect(() => {
+        if (initialContent) {
+            setColumns(initialContent.columns || defaultCols);
+            setTasks(initialContent.tasks || defaultTasks);
+        }
+    }, [initialContent]);
+
+    const trpcUtils = trpc.useUtils();
+    const updateContent = trpc.page.updateBlockContent.useMutation();
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const saveState = (newColumns: Column[], newTasks: Task[], immediate = false) => {
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+
+        const doSave = () => {
+            console.log("Saving Kanban State!", { columns: newColumns, tasks: newTasks });
+            updateContent.mutate({
+                id: blockId,
+                content: { columns: newColumns, tasks: newTasks },
+            }, {
+                onError: (err) => console.error("Failed to save Kanban state:", err),
+                onSuccess: () => {
+                    console.log("Kanban state saved!")
+                    trpcUtils.page.getById.invalidate();
+                }
+            });
+        };
+
+        if (immediate) {
+            doSave();
+        } else {
+            saveTimeoutRef.current = setTimeout(doSave, 500);
+        }
+    };
+
+    const deleteTask = (id: Id) => {
+        const newTasks = tasks.filter((task) => task.id !== id);
+        setTasks(newTasks);
+        saveState(columns, newTasks, true);
+    };
+
+    const addTask = (columnId: Id, content: string) => {
+        const newTask: Task = {
+            id: Date.now().toString(),
+            columnId,
+            content,
+        };
+        const newTasks = [...tasks, newTask];
+        setTasks(newTasks);
+        saveState(columns, newTasks, true);
+    };
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -72,14 +126,18 @@ export default function KanbanBoard() {
             setTasks((tasks) => {
                 const activeIndex = tasks.findIndex((t) => t.id === activeId);
                 const overIndex = tasks.findIndex((t) => t.id === overId);
+                let newTasks: Task[];
 
                 if (tasks[activeIndex].columnId !== tasks[overIndex].columnId) {
-                    const newTasks = [...tasks];
+                    newTasks = [...tasks];
                     newTasks[activeIndex].columnId = tasks[overIndex].columnId;
-                    return arrayMove(newTasks, activeIndex, overIndex - 1);
+                    newTasks = arrayMove(newTasks, activeIndex, overIndex - 1);
+                } else {
+                    newTasks = arrayMove(tasks, activeIndex, overIndex);
                 }
 
-                return arrayMove(tasks, activeIndex, overIndex);
+                saveState(columns, newTasks);
+                return newTasks;
             });
         }
 
@@ -87,9 +145,12 @@ export default function KanbanBoard() {
         if (isActiveTask && isOverColumn) {
             setTasks((tasks) => {
                 const activeIndex = tasks.findIndex((t) => t.id === activeId);
-                const newTasks = [...tasks];
+                let newTasks = [...tasks];
                 newTasks[activeIndex].columnId = overId;
-                return arrayMove(newTasks, activeIndex, activeIndex); // keeps it at same index but swaps col
+                newTasks = arrayMove(newTasks, activeIndex, activeIndex); // keeps it at same index but swaps col
+
+                saveState(columns, newTasks);
+                return newTasks;
             });
         }
     }
@@ -97,6 +158,10 @@ export default function KanbanBoard() {
     function onDragEnd(event: DragEndEvent) {
         setActiveColumn(null);
         setActiveTask(null);
+
+        // Always flush save when a drag ends to clear the 500ms timeout 
+        // and guarantee immediate persistence before unmounts.
+        saveState(columns, tasks, true);
 
         const { active, over } = event;
         if (!over) return;
@@ -110,13 +175,15 @@ export default function KanbanBoard() {
             setColumns(columns => {
                 const activeColIndex = columns.findIndex(col => col.id === activeId);
                 const overColIndex = columns.findIndex(col => col.id === overId);
-                return arrayMove(columns, activeColIndex, overColIndex);
+                const newCols = arrayMove(columns, activeColIndex, overColIndex);
+                saveState(newCols, tasks, true);
+                return newCols;
             })
         }
     }
 
     return (
-        <div className="h-full w-full flex items-start overflow-x-auto p-4 gap-4 bg-background">
+        <div className="h-full w-full flex items-start justify-center overflow-x-auto p-4 gap-4 bg-background">
             <DndContext
                 sensors={sensors}
                 collisionDetection={closestCorners}
@@ -131,6 +198,8 @@ export default function KanbanBoard() {
                                 key={col.id}
                                 column={col}
                                 tasks={tasks.filter((task) => task.columnId === col.id)}
+                                deleteTask={deleteTask}
+                                addTask={addTask}
                             />
                         ))}
                     </SortableContext>
@@ -142,9 +211,11 @@ export default function KanbanBoard() {
                             <BoardColumn
                                 column={activeColumn}
                                 tasks={tasks.filter((task) => task.columnId === activeColumn.id)}
+                                deleteTask={deleteTask}
+                                addTask={addTask}
                             />
                         )}
-                        {activeTask && <TaskCard task={activeTask} isOverlay />}
+                        {activeTask && <TaskCard task={activeTask} deleteTask={deleteTask} isOverlay />}
                     </DragOverlay>,
                     document.body
                 )}

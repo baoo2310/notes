@@ -10,7 +10,7 @@ const MODES: Record<PomodoroMode, { label: string; minutes: number; color: strin
     longBreak: { label: "Long Break", minutes: 15, color: "text-blue-400" },
 };
 
-// ─── Global state store so timer survives page switches ─────────────
+// ─── LocalStorage Helper ─────────────
 type TimerState = {
     mode: PomodoroMode;
     secondsLeft: number;
@@ -18,20 +18,24 @@ type TimerState = {
     startedAt: number | null; // Date.now() when timer was started
 };
 
-const globalTimers = new Map<string, TimerState>();
-
-function getOrCreateTimer(blockId: string): TimerState {
-    if (!globalTimers.has(blockId)) {
-        globalTimers.set(blockId, {
-            mode: "work",
-            secondsLeft: MODES.work.minutes * 60,
-            isRunning: false,
-            startedAt: null,
-        });
+function getSavedTimer(blockId: string): TimerState {
+    if (typeof window === "undefined") {
+        return { mode: "work", secondsLeft: MODES.work.minutes * 60, isRunning: false, startedAt: null };
     }
-    return globalTimers.get(blockId)!;
+    const saved = localStorage.getItem(`pomodoro_${blockId}`);
+    if (saved) {
+        try {
+            return JSON.parse(saved);
+        } catch (e) { }
+    }
+    return { mode: "work", secondsLeft: MODES.work.minutes * 60, isRunning: false, startedAt: null };
 }
 
+function saveTimer(blockId: string, state: TimerState) {
+    if (typeof window !== "undefined") {
+        localStorage.setItem(`pomodoro_${blockId}`, JSON.stringify(state));
+    }
+}
 // ────────────────────────────────────────────────────────────────────
 
 interface PomodoroBlockProps {
@@ -41,7 +45,7 @@ interface PomodoroBlockProps {
 export default function PomodoroBlock({ blockId }: PomodoroBlockProps) {
     // Restore from global store, accounting for elapsed time if running
     const initState = useCallback(() => {
-        const saved = getOrCreateTimer(blockId);
+        const saved = getSavedTimer(blockId);
         if (saved.isRunning && saved.startedAt) {
             const elapsed = Math.floor((Date.now() - saved.startedAt) / 1000);
             const remaining = Math.max(0, saved.secondsLeft - elapsed);
@@ -50,38 +54,48 @@ export default function PomodoroBlock({ blockId }: PomodoroBlockProps) {
         return saved;
     }, [blockId]);
 
-    const [mode, setMode] = useState<PomodoroMode>(() => initState().mode);
-    const [secondsLeft, setSecondsLeft] = useState(() => initState().secondsLeft);
-    const [isRunning, setIsRunning] = useState(() => initState().isRunning);
+    const [mode, setMode] = useState<PomodoroMode>("work");
+    const [secondsLeft, setSecondsLeft] = useState(MODES.work.minutes * 60);
+    const [isRunning, setIsRunning] = useState(false);
+    const [isLoaded, setIsLoaded] = useState(false);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Hydrate from localStorage on mount
+    useEffect(() => {
+        const state = initState();
+        setMode(state.mode);
+        setSecondsLeft(state.secondsLeft);
+        setIsRunning(state.isRunning);
+        setIsLoaded(true);
+    }, [initState]);
 
     const totalSeconds = MODES[mode].minutes * 60;
     const progress = ((totalSeconds - secondsLeft) / totalSeconds) * 100;
 
-    // Persist to global store on every change
+    // Persist to localStore on every change
     useEffect(() => {
-        globalTimers.set(blockId, {
+        if (!isLoaded) return;
+        saveTimer(blockId, {
             mode,
             secondsLeft,
             isRunning,
             startedAt: isRunning ? Date.now() : null,
         });
-    }, [mode, secondsLeft, isRunning, blockId]);
+    }, [mode, secondsLeft, isRunning, blockId, isLoaded]);
 
-    // Timer tick
+    // Timer tick - simplified to just handle secondsLeft internally!
     useEffect(() => {
         if (isRunning && secondsLeft > 0) {
             intervalRef.current = setInterval(() => {
                 setSecondsLeft((s) => {
-                    if (s <= 1) {
+                    const next = s - 1;
+                    if (next <= 0) {
                         setIsRunning(false);
                         return 0;
                     }
-                    return s - 1;
+                    return next;
                 });
             }, 1000);
-        } else {
-            if (intervalRef.current) clearInterval(intervalRef.current);
         }
         return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
     }, [isRunning, secondsLeft]);

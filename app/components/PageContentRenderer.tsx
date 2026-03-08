@@ -57,7 +57,7 @@ function BlockCard({ block }: { block: PageBlock }) {
             case "NOTE":
                 return <NoteBlock blockId={block.id} initialContent={block.content} />;
             case "BOARD":
-                return <KanbanBoard />;
+                return <KanbanBoard blockId={block.id} initialContent={block.content} />;
             case "CALENDAR":
                 return <CalendarBlock />;
             case "LINK":
